@@ -1,0 +1,41 @@
+{
+  "currency": "SAR",
+  "subscriptions": [
+    {
+      "id": "mithaq_sub_1month_explorer",
+      "referenceName": "The Explorer (المستكشف)",
+      "duration": "1 Month",
+      "price": 169.99,
+      "type": "Auto-Renewable"
+    },
+    {
+      "id": "mithaq_sub_3months_serious",
+      "referenceName": "The Serious (الجاد)",
+      "duration": "3 Months",
+      "price": 299.99,
+      "type": "Auto-Renewable",
+      "isDefault": true
+    },
+    {
+      "id": "mithaq_sub_1year_elite",
+      "referenceName": "The Elite (النخبة)",
+      "duration": "1 Year",
+      "price": 899.00,
+      "type": "Auto-Renewable"
+    }
+  ],
+  "consumables": [
+    {
+      "id": "mithaq_consumable_reveal_contact",
+      "referenceName": "Reveal Contact (طلب شوفة/كشف الرقم)",
+      "price": 49.99,
+      "type": "Consumable"
+    },
+    {
+      "id": "mithaq_consumable_add_profile",
+      "referenceName": "Add Profile (إضافة ملف تابع)",
+      "price": 99.99,
+      "type": "Consumable"
+    }
+  ]
+}

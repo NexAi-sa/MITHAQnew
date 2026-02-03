@@ -1,0 +1,1 @@
+enum AvatarVisibility { basic, enhanced }
