@@ -20,15 +20,19 @@ class AdvisorChatScreen extends ConsumerStatefulWidget {
 class _AdvisorChatScreenState extends ConsumerState<AdvisorChatScreen> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
+  bool _hasStarted = false;
 
   @override
   void initState() {
     super.initState();
-    // Start consultation after build
+    // Start consultation after build (only once)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(advisorControllerProvider.notifier)
-          .startConsultation(targetProfileId: widget.initialProfileId);
+      if (!_hasStarted) {
+        _hasStarted = true;
+        ref
+            .read(advisorControllerProvider.notifier)
+            .startConsultation(targetProfileId: widget.initialProfileId);
+      }
     });
   }
 

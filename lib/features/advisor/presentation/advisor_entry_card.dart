@@ -112,7 +112,7 @@ class AdvisorProfileButton extends StatelessWidget {
         padding: 4,
         iconColor: primaryColor,
       ),
-      label: const Text('استشارة هذا الحساب'),
+      label: const Text('استشر خبير التوافق عن هذا الحساب'),
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryColor,
         side: BorderSide(color: primaryColor),

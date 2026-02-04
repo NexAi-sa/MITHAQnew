@@ -20,13 +20,93 @@ class CompatibilityEngine {
       return _emptyResult(targetProfileId);
     }
 
+    final basicScore = _calculateBasic(currentUser, targetProfile);
+    final styleScore = _calculateStyle(currentUser, targetProfile);
+    final psychologicalScore = _calculatePsychological(
+      currentUser,
+      targetProfile,
+    );
+
+    final tags = _generateCompatibilityTags(
+      currentUser,
+      targetProfile,
+      basicScore,
+      psychologicalScore,
+    );
+    final report = _generateHybridReport(
+      currentUser,
+      targetProfile,
+      tags,
+      psychologicalScore,
+    );
+
     return CompatibilityResult(
       targetProfileId: targetProfileId,
-      basic: _calculateBasic(currentUser, targetProfile),
-      style: _calculateStyle(currentUser, targetProfile),
-      psychological: _calculatePsychological(currentUser, targetProfile),
+      basic: basicScore,
+      style: styleScore,
+      psychological: psychologicalScore,
       calculatedAt: DateTime.now(),
+      compatibilityTags: tags,
+      hybridReportText: report,
     );
+  }
+
+  List<String> _generateCompatibilityTags(
+    SeekerProfile user,
+    SeekerProfile target,
+    AxisScore basic,
+    AxisScore psych,
+  ) {
+    final tags = <String>[];
+
+    // 1. Geography
+    if (user.city == target.city) tags.add('نفس المدينة');
+
+    // 2. Personality Alignment
+    if (user.personalityType != null &&
+        user.personalityType == target.personalityType) {
+      tags.add('توافق في نمط ${user.personalityType}');
+    }
+
+    // 3. Priorities
+    final userPriorities =
+        (user.personalityData?['priorities'] as List?)?.cast<String>() ?? [];
+    final targetPriorities =
+        (target.personalityData?['priorities'] as List?)?.cast<String>() ?? [];
+    if (userPriorities.isNotEmpty &&
+        targetPriorities.isNotEmpty &&
+        userPriorities.first == targetPriorities.first) {
+      tags.add('اشتراك في أولوية ${userPriorities.first}');
+    }
+
+    // 4. Age
+    if (user.age != null &&
+        target.age != null &&
+        (user.age! - target.age!).abs() <= 3) {
+      tags.add('تقارب في العمر');
+    }
+
+    return tags.take(3).toList();
+  }
+
+  String? _generateHybridReport(
+    SeekerProfile user,
+    SeekerProfile target,
+    List<String> tags,
+    AxisScore psych,
+  ) {
+    if (!psych.isComplete) return null;
+
+    String reason = 'تقارب جميل في الرؤى';
+
+    if (user.personalityType != null &&
+        user.personalityType == target.personalityType) {
+      reason = 'اشتراككما في رؤية "${user.personalityType}"';
+    } else if (tags.contains('نفس المدينة')) {
+      reason = 'تواجدكما في نفس المدينة وتقارب أهدافكما';
+    }
+
+    return 'مرحباً.. قبل أن تبدآ، يخبركما ميثاق أن $reason هو ما جعل التوافق بينكما متميزاً. ننصحكما بالحديث عن تطلعاتكما المستقبلية لبناء حياة مستقرة!';
   }
 
   AxisScore _calculateBasic(SeekerProfile user, SeekerProfile target) {
@@ -133,19 +213,75 @@ class CompatibilityEngine {
   }
 
   AxisScore _calculatePsychological(SeekerProfile user, SeekerProfile target) {
-    // Psychological compatibility requires advisor insights or mini check-ins
-    // For now, mark as incomplete if no data available
-    // Parameters user and target would be used in a real implementation
-    // to check advisor repository and check-in data
+    if (user.personalityType == null || target.personalityType == null) {
+      return const AxisScore(
+        axis: CompatibilityAxis.psychological,
+        score: 0,
+        isComplete: false,
+        positiveReasons: [],
+        discussionPoints: [
+          'أكمل "اختبار العمى عن المثالية" لتفعيل التوافق النفسي',
+        ],
+      );
+    }
 
-    // Mock: In a real app, we'd check advisor repository and check-in data
-    // For now, always return incomplete since we have no psychological data
-    return const AxisScore(
+    int score = 50;
+    final positives = <String>[];
+    final discussions = <String>[];
+
+    // 1. Home Type Alignment
+    if (user.personalityType == target.personalityType) {
+      score += 30;
+      positives.add('توافق تام في نمط الحياة (${user.personalityType})');
+    } else {
+      // Check for clashing types (e.g., Castle vs Camping)
+      if ((user.personalityType == 'صاحب الحصن المنيع' &&
+              target.personalityType == 'روح المغامرة الحرّة') ||
+          (target.personalityType == 'صاحب الحصن المنيع' &&
+              user.personalityType == 'روح المغامرة الحرّة')) {
+        score -= 20;
+        discussions.add('اختلاف في الرؤية للخصوصية مقابل الانفتاح');
+      } else {
+        score += 10;
+        discussions.add('تنوع جميل في الطباع');
+      }
+    }
+
+    // 2. Silence Interpretation Analysis
+    final userSilence = user.personalityData?['silence'];
+    final targetSilence = target.personalityData?['silence'];
+
+    if (userSilence != null && targetSilence != null) {
+      if (userSilence == targetSilence) {
+        score += 20;
+        positives.add('تفسير مشترك للمواقف الصامتة');
+      } else if (userSilence == 'apathy' || targetSilence == 'apathy') {
+        // One needs affirmation, one provides stability
+        score += 15;
+        positives.add('علاقة تكاملية: أمان وتفهم متبادل');
+      }
+    }
+
+    // 3. Priorities Check
+    final userPriorities =
+        (user.personalityData?['priorities'] as List?)?.cast<String>() ?? [];
+    final targetPriorities =
+        (target.personalityData?['priorities'] as List?)?.cast<String>() ?? [];
+
+    final commonPriorities = userPriorities
+        .where((p) => targetPriorities.contains(p))
+        .toList();
+    if (commonPriorities.isNotEmpty) {
+      score += 10 * commonPriorities.length;
+      positives.add('اشتراك في قيم: ${commonPriorities.join("، ")}');
+    }
+
+    return AxisScore(
       axis: CompatibilityAxis.psychological,
-      score: 0,
-      isComplete: false,
-      positiveReasons: [],
-      discussionPoints: ['لم يتوفر بيانات كافية للتقييم النفسي'],
+      score: score.clamp(0, 100),
+      isComplete: true,
+      positiveReasons: positives.take(2).toList(),
+      discussionPoints: discussions.take(2).toList(),
     );
   }
 

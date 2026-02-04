@@ -1,14 +1,31 @@
+import 'package:flutter/foundation.dart';
 import '../domain/advisor_message.dart';
 import '../domain/advisor_summary.dart';
 import '../domain/advisor_policies.dart';
 import '../../seeker/data/profile_repository.dart';
 import '../../seeker/domain/profile.dart';
+import '../../../core/integrations/ai/gemini_advisor_client.dart';
+import '../../../core/config/feature_flags.dart';
 
-/// Mock AI engine that simulates advisor responses
+/// AI engine for advisor - uses real Gemini AI when enabled
 class AdvisorMockEngine {
   final ProfileRepository _profileRepo;
+  final GeminiAdvisorClient _geminiClient = GeminiAdvisorClient();
+  bool _geminiInitialized = false;
 
   AdvisorMockEngine(this._profileRepo);
+
+  /// Initialize Gemini if enabled
+  Future<void> _ensureGeminiInit() async {
+    if (FeatureFlags.enableRealAI && !_geminiInitialized) {
+      try {
+        await _geminiClient.init();
+        _geminiInitialized = true;
+      } catch (e) {
+        debugPrint('Gemini init failed: $e');
+      }
+    }
+  }
 
   /// Generate a response based on user message and optional target profile
   Future<AdvisorMessage> generateResponse({
@@ -28,86 +45,151 @@ class AdvisorMockEngine {
       );
     }
 
-    // Support Agent Logic
+    // Support Agent Logic - use AI
     if (targetProfileId == 'support') {
       return _generateSupportResponse(userMessage);
     }
 
-    // Check for profile lookup request
+    // Use real Gemini AI if enabled
+    if (FeatureFlags.enableRealAI) {
+      await _ensureGeminiInit();
+      if (_geminiInitialized) {
+        // Add profile context if available
+        String enrichedMessage = userMessage;
+        if (targetProfileId != null) {
+          final profile = await _profileRepo.getProfileById(targetProfileId);
+          if (profile != null) {
+            enrichedMessage =
+                '''
+معلومات الحساب المستهدف:
+- الاسم: ${profile.name}
+- العمر: ${profile.age} سنة
+- المدينة: ${profile.city}
+- المهنة: ${profile.job}
+- الحالة الاجتماعية: ${profile.maritalStatus.label}
+- ${profile.tribe != null ? 'القبيلة: ${profile.tribe}' : ''}
+- ${profile.isManagedByGuardian ? 'تحت إشراف ولي أمر' : ''}
 
-    // Check for profile lookup request
-    if (userMessage.contains('حلّل حساب') ||
-        userMessage.contains('Profile ID')) {
-      final profileIdMatch = RegExp(r'p\d+').firstMatch(userMessage);
-      if (profileIdMatch != null) {
-        return _generateProfileAnalysis(profileIdMatch.group(0)!);
+سؤال المستخدم: $userMessage
+''';
+          }
+        }
+
+        final response = await _geminiClient.chat(enrichedMessage);
+        return response.copyWith(relatedProfileId: targetProfileId);
       }
-      return AdvisorMessage(
-        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-        content: 'يرجى تزويدي برقم الحساب (مثال: p1) لأتمكن من تحليله.',
-        sender: MessageSender.advisor,
-        timestamp: DateTime.now(),
-      );
     }
 
-    // Check for compatibility question
+    // Fallback to mock responses
+    return _generateMockResponse(userMessage, targetProfileId);
+  }
+
+  /// Generate mock response (fallback)
+  Future<AdvisorMessage> _generateMockResponse(
+    String userMessage,
+    String? targetProfileId,
+  ) async {
+    final sentiment = _analyzeSentiment(userMessage);
+    String prefix = _getSentimentPrefix(sentiment);
+
+    // Profile lookup request
+    if (userMessage.contains('حلّل') ||
+        userMessage.contains('MITH-') ||
+        userMessage.contains('معرف') ||
+        userMessage.contains('حساب')) {
+      final profileIdMatch = RegExp(
+        r'(MITH-[A-Z0-9-]+|p\d+)',
+      ).firstMatch(userMessage);
+      if (profileIdMatch != null) {
+        final analysis = await _generateProfileAnalysis(
+          profileIdMatch.group(0)!,
+        );
+        return analysis.copyWith(content: '$prefix ${analysis.content}');
+      }
+    }
+
+    // Compatibility question
     if (userMessage.contains('مناسب لي') || userMessage.contains('توافق')) {
       if (targetProfileId != null) {
-        return _generateCompatibilityResponse(targetProfileId);
+        final compResponse = await _generateCompatibilityResponse(
+          targetProfileId,
+        );
+        return compResponse.copyWith(
+          content: '$prefix ${compResponse.content}',
+        );
       }
-      return AdvisorMessage(
-        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-        content:
-            'لتقييم التوافق، أحتاج معرفة الحساب المطلوب. هل تريد فتح ملف معين؟',
-        sender: MessageSender.advisor,
-        timestamp: DateTime.now(),
-      );
     }
 
-    // Check for conflict points question
+    // Conflict points question
     if (userMessage.contains('خلاف') || userMessage.contains('مشكلة')) {
       if (targetProfileId != null) {
-        return _generateConflictPointsResponse(targetProfileId);
+        final conflictResponse = await _generateConflictPointsResponse(
+          targetProfileId,
+        );
+        return conflictResponse.copyWith(
+          content: '$prefix ${conflictResponse.content}',
+        );
       }
-      return AdvisorMessage(
-        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-        content:
-            'لتحديد نقاط الخلاف المحتملة، أحتاج معرفة الحساب. هل يمكنك تحديده؟',
-        sender: MessageSender.advisor,
-        timestamp: DateTime.now(),
-      );
     }
 
-    // Check for first question suggestion
-    if (userMessage.contains('أول سؤال') || userMessage.contains('أسأل')) {
-      return AdvisorMessage(
-        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-        content: '''بناءً على خبرتي، أنصح بالبدء بسؤال مفتوح وودي مثل:
-
-"ما هي أهم ثلاث قيم تبحث عنها في شريك الحياة؟"
-
-هذا السؤال يفتح باب الحوار بشكل إيجابي ويعطيك فكرة عن أولوياته/ها.''',
-        sender: MessageSender.advisor,
-        timestamp: DateTime.now(),
-        relatedProfileId: targetProfileId,
-      );
-    }
-
-    // Default empathetic response
+    // Default Response
     return AdvisorMessage(
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-      content: '''شكراً لمشاركتك معي. 
-
-أفهم أن اختيار شريك الحياة قرار مهم ويحتاج تأني. كيف أقدر أساعدك اليوم؟
-
-يمكنني مساعدتك في:
-• تحليل توافق مع حساب معين
-• اقتراح أسئلة للتعارف
-• فهم نقاط القوة والتحديات المحتملة''',
+      content:
+          '$prefix شكراً لمشاركتك معي. أشعر من كلماتك بـ (${_getSentimentLabel(sentiment)})، وهذا يساعدني جداً في توجيه التوافق لك بشكل أدق. كيف أقدر أساعدك؟',
       sender: MessageSender.advisor,
       timestamp: DateTime.now(),
       relatedProfileId: targetProfileId,
     );
+  }
+
+  String _analyzeSentiment(String text) {
+    final t = text.toLowerCase();
+    if (t.contains('خايف') ||
+        t.contains('قلق') ||
+        t.contains('تردد') ||
+        t.contains('صعب')) {
+      return 'anxious';
+    }
+    if (t.contains('حلو') ||
+        t.contains('ممتاز') ||
+        t.contains('حماس') ||
+        t.contains('يا رب')) {
+      return 'excited';
+    }
+    if (t.contains('زعلان') ||
+        t.contains('تعبت') ||
+        t.contains('ليش') ||
+        t.contains('وقت')) {
+      return 'frustrated';
+    }
+    return 'neutral';
+  }
+
+  String _getSentimentPrefix(String sentiment) {
+    switch (sentiment) {
+      case 'anxious':
+        return 'أقدّر صدقك، من الطبيعي الشعور بالقلق في هذه المرحلة، وأنا هنا لأطمئنك بالبيانات..';
+      case 'excited':
+        return 'جميل جداً هذا التفاؤل! الطاقة الإيجابية هي أول خطوة لزواج ناجح..';
+      case 'frustrated':
+        return 'أتفهمك تماماً، الرحلة قد تكون مرهقة أحياناً لكن ميثاق صُمم ليختصر عليك العناء..';
+      default:
+        return 'أهلاً بك، قراءة هادئة ومتزنة منك..';
+    }
+  }
+
+  String _getSentimentLabel(String sentiment) {
+    switch (sentiment) {
+      case 'anxious':
+        return 'حرص واهتمام بالتفاصيل';
+      case 'excited':
+        return 'انفتاح وحيوية';
+      case 'frustrated':
+        return 'رغبة في الوضوح والحسم';
+      default:
+        return 'اتزان وعقلانية';
+    }
   }
 
   Future<AdvisorMessage> _generateProfileAnalysis(String profileId) async {
@@ -124,16 +206,16 @@ class AdvisorMockEngine {
     return AdvisorMessage(
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
       content:
-          '''نظرت في الحساب وهذه ملاحظاتي الأولية:
+          '''أهلاً بك، لقد قمت بمراجعة بيانات هذا الحساب بعناية.. إليك قراءتي الأولية: 🔍
 
 👤 ${profile.name} - ${profile.age} سنة
 📍 ${profile.city}
 💼 ${profile.job}
 ${profile.tribe != null ? '🏛 ${profile.tribe}' : ''}
 
-${profile.isManagedByGuardian ? '✨ هذا الحساب بإدارة ولي الأمر، مما يدل على جدية واضحة.' : ''}
+${profile.isManagedByGuardian ? '✨ ملاحظة مميزة: هذا الحساب تحت إشراف ولي الأمر، وهذا يعطي مؤشر عالي جداً على الجدية والوضوح في هذا الطلب.' : ''}
 
-هل تريد تحليل توافق تفصيلي؟''',
+بناءً على ملفك الشخصي، نرى أن هناك نقاط التقاء جميلة.. هل تود أن نتعمق أكثر في "تحليل التوافق" لنرى مدى انسجامكما في القيم وأسلوب الحياة؟''',
       sender: MessageSender.advisor,
       timestamp: DateTime.now(),
       relatedProfileId: profileId,
@@ -210,7 +292,7 @@ ${profile.isManagedByGuardian ? '✨ هذا الحساب بإدارة ولي ا�
     String? targetProfileId,
   }) async {
     SeekerProfile? profile;
-    if (targetProfileId != null) {
+    if (targetProfileId != null && targetProfileId != 'support') {
       profile = await _profileRepo.getProfileById(targetProfileId);
     }
 
@@ -225,7 +307,7 @@ ${profile.isManagedByGuardian ? '✨ هذا الحساب بإدارة ولي ا�
       ],
       discussionPoints: [
         'مناقشة التوقعات المالية والسكنية',
-        'التحدث عن دور هر طرف في العلاقة',
+        'التحدث عن دور كل طرف في العلاقة',
         'فهم علاقة كل طرف بعائلته',
       ],
       suggestedQuestions: [
@@ -256,7 +338,15 @@ ${profile.isManagedByGuardian ? '✨ هذا الحساب بإدارة ولي ا�
   }
 
   Future<AdvisorMessage> _generateSupportResponse(String userMessage) async {
-    // Basic AI simulation for support
+    // Use real AI for support if enabled
+    if (FeatureFlags.enableRealAI) {
+      await _ensureGeminiInit();
+      if (_geminiInitialized) {
+        return await _geminiClient.supportChat(userMessage);
+      }
+    }
+
+    // Fallback mock support response
     String content;
     final msg = userMessage.toLowerCase();
 

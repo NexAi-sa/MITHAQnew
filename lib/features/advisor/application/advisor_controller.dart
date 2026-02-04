@@ -5,6 +5,8 @@ import '../domain/advisor_policies.dart';
 import '../data/advisor_repository.dart';
 import '../data/advisor_mock_engine.dart';
 import '../../seeker/data/profile_repository.dart';
+import '../../compatibility/domain/compatibility_model.dart';
+import '../../compatibility/data/compatibility_engine.dart';
 
 /// State for the advisor feature
 class AdvisorState {
@@ -61,19 +63,39 @@ final advisorMockEngineProvider = Provider<AdvisorMockEngine>((ref) {
 class AdvisorController extends StateNotifier<AdvisorState> {
   final AdvisorRepository _repository;
   final AdvisorMockEngine _engine;
+  final Ref _ref;
 
-  AdvisorController(this._repository, this._engine)
+  AdvisorController(this._repository, this._engine, this._ref)
     : super(const AdvisorState());
 
   /// Start a new consultation, optionally with a target profile
-  void startConsultation({String? targetProfileId}) {
+  Future<void> startConsultation({
+    String? targetProfileId,
+    CompatibilityResult? preCalculatedResult,
+  }) async {
     _repository.clearMessages();
+
+    // Fetch compatibility if not provided
+    CompatibilityResult? result = preCalculatedResult;
+    if (result == null &&
+        targetProfileId != null &&
+        targetProfileId != 'support') {
+      try {
+        result = await _ref.read(
+          compatibilityResultProvider(targetProfileId).future,
+        );
+      } catch (_) {
+        // Ignore errors
+      }
+    }
 
     // Welcome message
     String welcomeContent;
     if (targetProfileId == 'support') {
       welcomeContent =
           'أهلاً بك في الدعم الفني لميثاق 🛠️\n\nأنا وكيل الذكاء الاصطناعي الخاص بالدعم. يمكنني الإجابة على استفساراتك حول شروط الاستخدام، سياسة الخصوصية، أو أي مشكلة تقنية تواجهها.';
+    } else if (result?.hybridReportText != null) {
+      welcomeContent = result!.hybridReportText!;
     } else if (targetProfileId != null) {
       welcomeContent =
           'أهلاً بك في استشارة التوافق 💫\n\nأنا هنا لمساعدتك في فهم هذا الحساب بشكل أفضل. كيف أقدر أساعدك؟';
@@ -185,5 +207,5 @@ final advisorControllerProvider =
     StateNotifierProvider<AdvisorController, AdvisorState>((ref) {
       final repository = ref.watch(advisorRepositoryProvider);
       final engine = ref.watch(advisorMockEngineProvider);
-      return AdvisorController(repository, engine);
+      return AdvisorController(repository, engine, ref);
     });

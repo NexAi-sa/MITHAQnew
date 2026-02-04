@@ -54,19 +54,42 @@ class SubscriptionScreen extends ConsumerWidget {
   }
 
   Widget _buildErrorState(BuildContext context, WidgetRef ref, String message) {
+    // Check if error message indicates configuration issue
+    final isConfigError =
+        message.contains('CONFIGURATION_ERROR') || message.contains('23');
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(MithaqSpacing.l),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+            Icon(
+              isConfigError
+                  ? Icons.settings_suggest_outlined
+                  : Icons.error_outline,
+              size: 64,
+              color: Colors.grey[400],
+            ),
             const SizedBox(height: 16),
             Text(
-              message,
-              style: TextStyle(color: Colors.grey[600]),
+              isConfigError
+                  ? 'عذراً، نظام المدفوعات تحت الصيانة أو لم يتم تفعيله بعد في متجر التطبيقات.'
+                  : message,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
+            if (isConfigError) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'تأكد من قبول "اتفاقية التطبيقات المدفوعة" في حساب المطور الخاص بك.',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => ref.refresh(offeringsProvider),

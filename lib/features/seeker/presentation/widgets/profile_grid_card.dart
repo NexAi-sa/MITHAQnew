@@ -78,7 +78,7 @@ class ProfileGridCard extends StatelessWidget {
   final Function(String)? onAccept;
   final int? compatibilityScore;
   final CompatibilityLevel? compatibilityLevel;
-  final String? photoUrl;
+  final String? bio;
   final bool isLiked;
   final bool isAccepted;
 
@@ -93,11 +93,11 @@ class ProfileGridCard extends StatelessWidget {
     required this.gender,
     required this.profileId,
     required this.onTap,
+    this.bio,
     this.onLike,
     this.onAccept,
     this.compatibilityScore,
     this.compatibilityLevel,
-    this.photoUrl,
     this.isLiked = false,
     this.isAccepted = false,
   });
@@ -148,13 +148,11 @@ class ProfileGridCard extends StatelessWidget {
                   flex: 4,
                   child: Center(
                     child: PrivacyAvatar(
-                      photoUrl: photoUrl,
+                      photoUrl: null,
                       gender: gender,
                       size: 90,
                       context: AvatarContext.grid,
-                      style: photoUrl != null
-                          ? AvatarStyle.blurredPhoto
-                          : AvatarStyle.silhouette,
+                      style: AvatarStyle.silhouette,
                     ),
                   ),
                 ),
@@ -211,13 +209,13 @@ class ProfileGridCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      // Age
+                      // Information Row (Age & Gender)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.calendar_today_outlined,
-                            size: 12,
+                            size: 11,
                             color: Colors.white.withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 4),
@@ -225,11 +223,52 @@ class ProfileGridCard extends StatelessWidget {
                             age != null ? '$age سنة' : 'غير محدد',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 11,
+                              fontSize: 10,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 3,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            gender == Gender.male ? Icons.male : Icons.female,
+                            size: 11,
+                            color: gender == Gender.male
+                                ? Colors.blue.shade300
+                                : Colors.pink.shade300,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            gender == Gender.male ? 'ذكر' : 'أنثى',
+                            style: TextStyle(
+                              color: gender == Gender.male
+                                  ? Colors.blue.shade200
+                                  : Colors.pink.shade200,
+                              fontSize: 10,
                             ),
                           ),
                         ],
                       ),
+                      if (bio != null && bio!.isNotEmpty) ...[
+                        const SizedBox(height: MithaqSpacing.s),
+                        Text(
+                          bio!,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 10,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ],
                   ),
                 ),

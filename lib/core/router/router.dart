@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../session/session_provider.dart';
@@ -18,17 +19,18 @@ import '../../features/seeker/presentation/seeker_requests_screen.dart';
 import '../../features/guardian/presentation/guardian_dashboard.dart';
 import '../../features/guardian/presentation/add_dependent_wizard.dart';
 import '../../features/settings/presentation/settings_screen.dart';
-import '../../features/common/presentation/placeholder_screens.dart'
-    hide FiltersScreen, SupportScreen;
 import '../../features/guardian/presentation/guardian_settings_screen.dart';
 import '../../features/guardian/presentation/guardian_shell.dart';
 import '../../features/advisor/presentation/advisor_chat_screen.dart';
 import '../../features/support/presentation/support_screen.dart';
+import '../../features/seeker/presentation/profile_details_screen.dart';
 import '../../features/common/presentation/legal_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
 
 import '../../features/seeker/presentation/filters_screen.dart';
 
 import '../../features/subscription/presentation/subscription_screen.dart';
+import '../../features/personality/presentation/personality_test_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(sessionProvider);
@@ -82,6 +84,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AccountScreen(),
           ),
           GoRoute(
+            path: '/seeker/profile/:id',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return ProfileDetailsScreen(profileId: id);
+            },
+          ),
+          GoRoute(
             path: '/seeker/account',
             builder: (context, state) => const AccountScreen(),
           ),
@@ -121,6 +130,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/guardian/dashboard',
             builder: (context, state) => const GuardianDashboard(),
           ),
+          GoRoute(
+            path: '/guardian/dependents/:id/profile',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return Scaffold(
+                appBar: AppBar(title: const Text('ملف التابع')),
+                body: Center(child: Text('ملف التابع ID: $id')),
+              );
+            },
+          ),
         ],
       ),
 
@@ -146,6 +165,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/support',
         builder: (context, state) => const SupportScreen(),
+      ),
+      GoRoute(
+        path: '/chat/:id',
+        builder: (context, state) {
+          final targetProfileId = state.pathParameters['id']!;
+          return ChatScreen(targetProfileId: targetProfileId);
+        },
+      ),
+      GoRoute(
+        path: '/profile/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ProfileDetailsScreen(profileId: id);
+        },
       ),
       GoRoute(
         path: '/legal/terms',
@@ -203,7 +236,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      if (authStatus == AuthStatus.signedOut && !isAuth) {
+      final isForgotPassword = state.matchedLocation == '/forgot-password';
+      final isLegal = state.matchedLocation.startsWith('/legal');
+
+      if (authStatus == AuthStatus.signedOut &&
+          !isAuth &&
+          !isForgotPassword &&
+          !isLegal) {
         return '/welcome';
       }
 

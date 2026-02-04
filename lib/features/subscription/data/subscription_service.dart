@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SubscriptionService {
   // API Keys
-  static const String _apiKeyApple = 'appl_yErAfapxRJORVxlkvbjTQXseREP';
+  static const String _apiKeyApple = 'appl_filBLonttVgMQNjIiUuLMlLqBfB';
   // static const String _apiKeyGoogle = 'YOUR_GOOGLE_KEY_HERE';
 
   // Entitlement ID configured in RevenueCat
@@ -13,7 +14,7 @@ class SubscriptionService {
 
   Future<void> init() async {
     try {
-      await Purchases.setLogLevel(LogLevel.debug);
+      await Purchases.setLogLevel(LogLevel.error);
 
       PurchasesConfiguration? configuration;
 
@@ -26,11 +27,8 @@ class SubscriptionService {
       if (configuration != null) {
         await Purchases.configure(configuration);
       }
-      print('✅ RevenueCat initialized successfully');
     } catch (e) {
-      print('⚠️ RevenueCat initialization failed: $e');
-      print('ℹ️ The app will continue without in-app purchases');
-      // Don't throw - allow app to continue without purchases
+      debugPrint('RevenueCat init error: $e');
     }
   }
 
@@ -40,7 +38,7 @@ class SubscriptionService {
       final offerings = await Purchases.getOfferings();
       return offerings;
     } on PlatformException catch (e) {
-      print('Error fetching offerings: $e');
+      debugPrint('Error fetching offerings: $e');
       return null;
     }
   }
@@ -54,7 +52,7 @@ class SubscriptionService {
       }
       return null;
     } on PlatformException catch (e) {
-      print('Error fetching product $productIdentifier: $e');
+      debugPrint('Error fetching product $productIdentifier: $e');
       return null;
     }
   }
@@ -68,7 +66,7 @@ class SubscriptionService {
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode != PurchasesErrorCode.purchaseCancelledError) {
-        print('Purchase error: $e');
+        debugPrint('Purchase error: $e');
       }
       return false;
     }
@@ -83,7 +81,7 @@ class SubscriptionService {
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode != PurchasesErrorCode.purchaseCancelledError) {
-        print('Consumable purchase error: $e');
+        debugPrint('Consumable purchase error: $e');
       }
       return false;
     }
@@ -95,7 +93,7 @@ class SubscriptionService {
       final customerInfo = await Purchases.restorePurchases();
       return customerInfo;
     } on PlatformException catch (e) {
-      print('Restore error: $e');
+      debugPrint('Restore error: $e');
       return null;
     }
   }
@@ -106,7 +104,7 @@ class SubscriptionService {
       final customerInfo = await Purchases.getCustomerInfo();
       return customerInfo.entitlements.all[_entitlementId]?.isActive ?? false;
     } on PlatformException catch (e) {
-      print('Check status error: $e');
+      debugPrint('Check status error: $e');
       return false;
     }
   }

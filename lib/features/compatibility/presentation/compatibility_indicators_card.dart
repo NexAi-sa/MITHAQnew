@@ -70,6 +70,51 @@ class CompatibilityIndicatorsCard extends StatelessWidget {
 
           const SizedBox(height: MithaqSpacing.l),
 
+          // Compatibility Tags
+          if (result.compatibilityTags.isNotEmpty) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: result.compatibilityTags
+                  .map(
+                    (tag) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: MithaqSpacing.s,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: MithaqColors.mint.withValues(alpha: 0.1),
+                        border: Border.all(
+                          color: MithaqColors.mint.withValues(alpha: 0.3),
+                        ),
+                        borderRadius: BorderRadius.circular(MithaqRadius.s),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 12,
+                            color: MithaqColors.mint,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            tag,
+                            style: const TextStyle(
+                              color: MithaqColors.navy,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: MithaqSpacing.l),
+          ],
+
           // Incomplete data notice
           if (result.hasIncompleteData)
             Container(

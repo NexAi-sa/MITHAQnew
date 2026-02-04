@@ -33,6 +33,12 @@ class _SeekerShellState extends State<SeekerShell> {
       label: 'اكتشف',
     ),
     _NavItem(
+      path: '/seeker/requests',
+      icon: Icons.inbox_outlined,
+      activeIcon: Icons.inbox,
+      label: 'الطلبات',
+    ),
+    _NavItem(
       path: '/seeker/messages',
       icon: Icons.chat_bubble_outline_rounded,
       activeIcon: Icons.chat_bubble_rounded,

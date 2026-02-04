@@ -13,6 +13,22 @@ class AdvisorMessage {
     required this.timestamp,
     this.relatedProfileId,
   });
+
+  AdvisorMessage copyWith({
+    String? id,
+    String? content,
+    MessageSender? sender,
+    DateTime? timestamp,
+    String? relatedProfileId,
+  }) {
+    return AdvisorMessage(
+      id: id ?? this.id,
+      content: content ?? this.content,
+      sender: sender ?? this.sender,
+      timestamp: timestamp ?? this.timestamp,
+      relatedProfileId: relatedProfileId ?? this.relatedProfileId,
+    );
+  }
 }
 
 enum MessageSender { user, advisor }

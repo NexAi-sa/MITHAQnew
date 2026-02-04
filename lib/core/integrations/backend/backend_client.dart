@@ -42,4 +42,6 @@ abstract class BackendClient {
   // UGC: Block & Report
   Future<void> blockUser(String targetUserId);
   Future<List<String>> fetchBlockedUsers();
+  // General RPC
+  Future<dynamic> invoke(String method, Map<String, dynamic> params);
 }

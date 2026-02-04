@@ -23,17 +23,3 @@ class SupportScreen extends StatelessWidget {
     );
   }
 }
-
-class PersonalityTestScreen extends StatelessWidget {
-  const PersonalityTestScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('تحليل الشخصية')),
-      body: const Center(
-        child: Text('اختبار تحليل الشخصية بالذكاء الاصطناعي (قريباً)'),
-      ),
-    );
-  }
-}

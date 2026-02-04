@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import '../../session/app_session.dart';
 import '../../../features/seeker/domain/profile.dart';
@@ -26,6 +28,9 @@ class SupabaseBackendClient implements BackendClient {
     name_visibility, 
     shufa_card_active, 
     shufa_card_is_verified,
+    shufa_card_guardian_name,
+    shufa_card_guardian_phone,
+    shufa_card_guardian_title,
     guardian_user_id,
     height, 
     build, 
@@ -34,7 +39,9 @@ class SupabaseBackendClient implements BackendClient {
     smoking, 
     hijab_preference,
     relationship,
-    partner_preferences
+    partner_preferences,
+    personality_type,
+    personality_data
   ''';
 
   SupabaseBackendClient(this._supabase);
@@ -93,6 +100,17 @@ class SupabaseBackendClient implements BackendClient {
 
   @override
   Future<SeekerProfile?> fetchProfile(String profileId) async {
+    // Basic UUID validation to prevent PostgrestException 22P02
+    final bool isValidUuid = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      caseSensitive: false,
+    ).hasMatch(profileId);
+
+    if (!isValidUuid) {
+      debugPrint("⚠️ Skipping fetchProfile: '$profileId' is not a valid UUID");
+      return null;
+    }
+
     try {
       final data = await _supabase
           .from('profiles')
@@ -103,6 +121,7 @@ class SupabaseBackendClient implements BackendClient {
       if (data == null) return null;
       return _mapToProfile(data);
     } catch (e) {
+      debugPrint("❌ Supabase fetchProfile error: $e");
       throw const be.NetworkException();
     }
   }
@@ -117,6 +136,7 @@ class SupabaseBackendClient implements BackendClient {
           .single();
       return _mapToProfile(data);
     } catch (e) {
+      debugPrint("❌ Supabase error: $e");
       throw const be.NetworkException();
     }
   }
@@ -126,6 +146,7 @@ class SupabaseBackendClient implements BackendClient {
     Map<String, dynamic>? filters,
   }) async {
     try {
+      debugPrint('🔍 Fetching discovery feed...');
       var query = _supabase
           .from('profiles')
           .select(_publicProfileFields)
@@ -134,8 +155,11 @@ class SupabaseBackendClient implements BackendClient {
       query = query.inFilter('role_context', ['seeker', 'dependent']);
 
       final data = await query;
-      return (data as List).map((p) => _mapToProfile(p)).toList();
-    } catch (e) {
+      debugPrint('🔍 Discovery feed loaded: ${(data as List).length} profiles');
+      return data.map((p) => _mapToProfile(p)).toList();
+    } catch (e, stack) {
+      debugPrint("❌ Supabase fetchDiscoveryFeed error: $e");
+      debugPrint("❌ Stack: $stack");
       throw const be.NetworkException();
     }
   }
@@ -150,6 +174,7 @@ class SupabaseBackendClient implements BackendClient {
 
       return (data as List).map((p) => _mapToProfile(p)).toList();
     } catch (e) {
+      debugPrint("❌ Supabase error: $e");
       throw const be.NetworkException();
     }
   }
@@ -232,7 +257,7 @@ class SupabaseBackendClient implements BackendClient {
         params: {'target_id': targetProfileId},
       );
     } catch (e) {
-      print('RPC unlock_guardian_contact error: $e');
+      // RPC error handled silently
     }
   }
 
@@ -247,7 +272,7 @@ class SupabaseBackendClient implements BackendClient {
         'blocked_id': targetUserId,
       });
     } catch (e) {
-      print('Block user error: $e');
+      // Block error handled silently
     }
   }
 
@@ -266,8 +291,29 @@ class SupabaseBackendClient implements BackendClient {
           .map((attr) => attr['blocked_id'] as String)
           .toList();
     } catch (e) {
-      print('Fetch blocked users error: $e');
       return [];
+    }
+  }
+
+  @override
+  Future<dynamic> invoke(String method, Map<String, dynamic> params) async {
+    try {
+      if (method == 'save_personality_result') {
+        final profileId = params['profile_id'];
+        final type = params['personality_type'];
+        final data = params['personality_data'];
+
+        await _supabase
+            .from('profiles')
+            .update({'personality_type': type, 'personality_data': data})
+            .eq('id', profileId);
+        return true;
+      }
+      // Add other RPC/Method handlers here
+      return null;
+    } catch (e) {
+      debugPrint("❌ invoke error ($method): $e");
+      throw const be.NetworkException();
     }
   }
 
@@ -314,6 +360,8 @@ class SupabaseBackendClient implements BackendClient {
       partnerPreferences: data['partner_preferences'] != null
           ? _parsePartnerPreferences(data['partner_preferences'])
           : null,
+      personalityType: data['personality_type'],
+      personalityData: data['personality_data'],
     );
   }
 
@@ -349,10 +397,16 @@ class SupabaseBackendClient implements BackendClient {
   Map<String, dynamic> _mapFromProfile(SeekerProfile p) {
     final String publicId = p.profilePublicId.isNotEmpty
         ? p.profilePublicId
-        : 'MITH-${DateTime.now().microsecondsSinceEpoch.toString().substring(10)}';
+        : 'MITH-${DateTime.now().millisecondsSinceEpoch.toString().substring(5, 11)}-${Random().nextInt(999999).toString().padLeft(6, "0")}';
+
+    // Ensure id is a valid UUID or skip it to let DB generate one
+    final bool isValidUuid = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      caseSensitive: false,
+    ).hasMatch(p.profileId);
 
     return {
-      if (p.profileId != 'new') 'id': p.profileId,
+      if (isValidUuid) 'id': p.profileId,
       'owner_user_id': p.userId,
       'role_context': p.profileOwnerRole == ProfileOwnerRole.seekerSelf
           ? 'seeker'
@@ -383,6 +437,8 @@ class SupabaseBackendClient implements BackendClient {
       'smoking': p.suitorPreferences?.smoking?.name,
       'hijab_preference': p.suitorPreferences?.hijab?.name,
       'partner_preferences': _mapPartnerPreferences(p.partnerPreferences),
+      'personality_type': p.personalityType,
+      'personality_data': p.personalityData,
     };
   }
 

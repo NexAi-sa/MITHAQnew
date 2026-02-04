@@ -531,7 +531,6 @@ final suitorRequestsProvider = FutureProvider<List<SuitorRequest>>((ref) async {
 
     return suitorRequests;
   } catch (e) {
-    print('Error in suitorRequestsProvider: $e');
     return []; // Return empty list on error
   }
 });

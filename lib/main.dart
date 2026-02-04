@@ -23,8 +23,12 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
-    url: dotenv.get('SUPABASE_URL'),
-    anonKey: dotenv.get('SUPABASE_ANON_KEY'),
+    url: const String.fromEnvironment('SUPABASE_URL') != ''
+        ? const String.fromEnvironment('SUPABASE_URL')
+        : dotenv.get('SUPABASE_URL'),
+    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY') != ''
+        ? const String.fromEnvironment('SUPABASE_ANON_KEY')
+        : dotenv.get('SUPABASE_ANON_KEY'),
   );
 
   // Initialize RevenueCat

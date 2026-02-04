@@ -1,6 +1,6 @@
 /// معرفات المنتجات للمشتريات داخل التطبيق (In-App Purchases)
 /// تتوافق مع التكوين في Apple App Store Connect
-/// RevenueCat Public API Key (iOS): appl_yErAfapxRJORVxlkvbjTQXseREP
+/// RevenueCat Public API Key (iOS): appl_filBLonttVgMQNjIiUuLMlLqBfB
 class MithaqProductIds {
   // --- الاشتراكات (Subscriptions) ---
   // Subscription Group: Mithaq_Premium

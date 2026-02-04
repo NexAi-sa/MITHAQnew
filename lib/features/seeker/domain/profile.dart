@@ -222,6 +222,8 @@ class SeekerProfile {
 
   final String profilePublicId;
   final String nameVisibility; // 'hidden' | 'first' | 'full_subscribers_only'
+  final String? personalityType;
+  final Map<String, dynamic>? personalityData;
 
   int? get age => dob != null ? calculateAge(dob!) : null;
 
@@ -255,6 +257,8 @@ class SeekerProfile {
     this.guardianUserId,
     this.profilePublicId = '',
     this.nameVisibility = 'hidden',
+    this.personalityType,
+    this.personalityData,
   });
 
   SeekerProfile copyWith({
@@ -287,6 +291,8 @@ class SeekerProfile {
     String? guardianUserId,
     String? profilePublicId,
     String? nameVisibility,
+    String? personalityType,
+    Map<String, dynamic>? personalityData,
   }) {
     return SeekerProfile(
       profileId: profileId ?? this.profileId,
@@ -322,6 +328,8 @@ class SeekerProfile {
       guardianUserId: guardianUserId ?? this.guardianUserId,
       profilePublicId: profilePublicId ?? this.profilePublicId,
       nameVisibility: nameVisibility ?? this.nameVisibility,
+      personalityType: personalityType ?? this.personalityType,
+      personalityData: personalityData ?? this.personalityData,
     );
   }
 }

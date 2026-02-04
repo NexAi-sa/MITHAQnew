@@ -12,6 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/shufa_card_widget.dart';
 import '../../avatar/domain/avatar_config.dart';
 import '../../seeker/domain/profile.dart';
+import '../../compatibility/domain/compatibility_model.dart';
+import '../../compatibility/data/compatibility_engine.dart';
+import 'widgets/ice_breaker_suggestions.dart';
 
 final chatMessagesProvider = FutureProvider.family<List<ChatMessage>, String>((
   ref,
@@ -366,6 +369,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               WidgetsBinding.instance.addPostFrameCallback(
                 (_) => _scrollToBottom(),
               );
+              // Show ice-breaker suggestions if no messages yet
+              if (messages.isEmpty) {
+                final targetProfileAsync = ref.watch(
+                  singleProfileProvider(session.targetProfileId),
+                );
+                final compatibilityAsync = ref.watch(
+                  compatibilityResultProvider(session.targetProfileId),
+                );
+                return targetProfileAsync.when(
+                  data: (targetProfile) => compatibilityAsync.when(
+                    data: (compatibility) => EmptyChatWithSuggestions(
+                      compatibility: compatibility,
+                      targetProfile: targetProfile,
+                      onSuggestionSelected: (suggestion) {
+                        _messageController.text = suggestion;
+                      },
+                    ),
+                    loading: () => EmptyChatWithSuggestions(
+                      targetProfile: targetProfile,
+                      onSuggestionSelected: (suggestion) {
+                        _messageController.text = suggestion;
+                      },
+                    ),
+                    error: (_, __) => EmptyChatWithSuggestions(
+                      targetProfile: targetProfile,
+                      onSuggestionSelected: (suggestion) {
+                        _messageController.text = suggestion;
+                      },
+                    ),
+                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (_, __) => const SizedBox(),
+                );
+              }
               return ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.all(MithaqSpacing.m),

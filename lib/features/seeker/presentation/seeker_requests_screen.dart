@@ -12,6 +12,7 @@ import '../../../core/session/session_provider.dart';
 class SeekerRequest {
   final String id; // Session ID
   final String publicId;
+  final String name;
   final String age;
   final String city;
   final String job;
@@ -24,6 +25,7 @@ class SeekerRequest {
   SeekerRequest({
     required this.id,
     required this.publicId,
+    required this.name,
     required this.age,
     required this.city,
     required this.job,
@@ -408,9 +410,7 @@ class _SeekerRequestsScreenState extends ConsumerState<SeekerRequestsScreen>
       ),
       child: Center(
         child: Text(
-          request.stage == ChatStage.requestSent
-              ? 'انتظار قبول الطرف الآخر'
-              : 'بانتظار موافقة ولي الأمر',
+          'بانتظار موافقة ${request.name.isNotEmpty ? request.name : "الطرف الآخر"}',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.7),
             fontSize: 13,
@@ -502,6 +502,7 @@ final seekerAllRequestsProvider = FutureProvider<List<SeekerRequest>>((
                       ? 'MITH-${otherProfile.profileId.substring(0, 4)}'
                       : 'MITH-${otherProfile.profileId}')
                 : otherProfile.profilePublicId,
+            name: otherProfile.name,
             age: '${otherProfile.age} سنة',
             city: otherProfile.city,
             job: otherProfile.job,
@@ -517,7 +518,6 @@ final seekerAllRequestsProvider = FutureProvider<List<SeekerRequest>>((
 
     return requests;
   } catch (e) {
-    print('Error in seekerAllRequestsProvider: $e');
     return [];
   }
 });

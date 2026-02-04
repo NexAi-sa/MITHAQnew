@@ -66,7 +66,6 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
       _gender = session.gender == SessionGender.male
           ? Gender.male
           : Gender.female;
-      print('ℹ️ Gender loaded from session: $_gender');
     }
 
     _stepController = AnimationController(
@@ -101,9 +100,7 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
 
   void _next() {
     // Validate step 1 - require gender selection
-    print('🔍 Validation - Current gender: $_gender');
     if (_currentStep == 0 && _gender == null) {
-      print('❌ Gender not selected!');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('يرجى اختيار الجنس'),
@@ -112,7 +109,6 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
       );
       return;
     }
-    print('✅ Validation passed!');
 
     if (_currentStep < 3) {
       _stepController.reset();
@@ -148,8 +144,9 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
       final notifier = ref.read(sessionProvider.notifier);
 
       // 1. Build profile object
+      final currentProfileId = ref.read(sessionProvider).profileId;
       final newProfile = SeekerProfile(
-        profileId: 'PROF-$userId',
+        profileId: currentProfileId ?? 'new',
         userId: userId,
         name: _nameController.text,
         city: _cityController.text,
@@ -471,10 +468,8 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
                   label: 'ذكر',
                   isSelected: _gender == Gender.male,
                   onTap: () {
-                    print('🔵 Male button tapped!');
                     setState(() {
                       _gender = Gender.male;
-                      print('✅ Gender updated to: $_gender');
                     });
                     ref
                         .read(sessionProvider.notifier)
@@ -489,10 +484,8 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
                   label: 'أنثى',
                   isSelected: _gender == Gender.female,
                   onTap: () {
-                    print('🟣 Female button tapped!');
                     setState(() {
                       _gender = Gender.female;
-                      print('✅ Gender updated to: $_gender');
                     });
                     ref
                         .read(sessionProvider.notifier)
@@ -626,11 +619,7 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
-                  print('🎨 Skin color tapped: ${color.name}');
                   setState(() => _skinColor = color);
-                  // ⚠️ لا نحفظ في الـ session الآن! فقط local state
-                  // سنحفظ كل شيء عند الإتمام النهائي
-                  print('✅ Skin color updated to: ${color.name}');
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -718,10 +707,7 @@ class _SeekerOnboardingScreenState extends ConsumerState<SeekerOnboardingScreen>
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
-                  print('💪 Build type tapped: ${type.name}');
                   setState(() => _buildType = type);
-                  // ⚠️ لا نحفظ في الـ session الآن! سنحفظ عند الإتمام
-                  print('✅ Build type updated to: ${type.name}');
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),

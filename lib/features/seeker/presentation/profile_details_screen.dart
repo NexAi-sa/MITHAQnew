@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../avatar/domain/avatar_config.dart';
@@ -53,6 +54,17 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           return const Scaffold(body: Center(child: Text('الملف غير موجود')));
         }
 
+        // Debug logging
+        debugPrint(
+          '📋 Profile loaded: ${profile.name}, age: ${profile.age}, city: ${profile.city}',
+        );
+        debugPrint(
+          '📋 Profile ID: ${profile.profileId}, User ID: ${profile.userId}',
+        );
+        debugPrint(
+          '📋 Session User ID: ${session.userId}, Profile Status: ${session.profileStatus}',
+        );
+
         final profileStatus = session.profileStatus;
 
         if (profileStatus == ProfileStatus.loading) {
@@ -61,7 +73,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           );
         }
 
-        if (profileStatus == ProfileStatus.missing) {
+        // Only show onboarding prompt if viewing own profile and it's missing
+        // Allow viewing other profiles regardless of own profile status
+        final isViewingOwnProfile = profile.userId == session.userId;
+        if (profileStatus == ProfileStatus.missing && isViewingOwnProfile) {
           return _buildOnboardingPrompt(context);
         }
 
@@ -268,6 +283,55 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                 fontSize: MithaqTypography.titleSmall,
               ),
             ),
+            const SizedBox(height: 8),
+            // Profile ID Badge with Copy
+            GestureDetector(
+              onTap: () {
+                final id = profile.profilePublicId.isNotEmpty
+                    ? profile.profilePublicId
+                    : profile.profileId.substring(0, 8);
+                Clipboard.setData(ClipboardData(text: id));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('تم نسخ معرف المستخدم'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: MithaqColors.navy.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: MithaqColors.navy.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'المعرف: ${profile.profilePublicId.isNotEmpty ? profile.profilePublicId : profile.profileId.substring(0, 8)}',
+                      style: const TextStyle(
+                        color: MithaqColors.navy,
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.copy_rounded,
+                      size: 12,
+                      color: MithaqColors.navy,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
         const MithaqSoftIcon(
@@ -461,11 +525,22 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     SeekerProfile profile,
   ) async {
     final currentUserSession = ref.read(sessionProvider);
+    // Use profileId for seekers (not userId!) or activeDependentId for guardians
     final activeId = currentUserSession.role == UserRole.seeker
-        ? currentUserSession.userId
+        ? currentUserSession.profileId
         : currentUserSession.activeDependentId;
 
-    if (activeId == null) return;
+    debugPrint('🔗 Contact Request - Role: ${currentUserSession.role}');
+    debugPrint('🔗 Contact Request - userId: ${currentUserSession.userId}');
+    debugPrint(
+      '🔗 Contact Request - profileId: ${currentUserSession.profileId}',
+    );
+    debugPrint('🔗 Contact Request - activeId (used): $activeId');
+
+    if (activeId == null) {
+      debugPrint('🔗 ❌ activeId is null! Cannot create chat session.');
+      return;
+    }
 
     // Contact Paywall: Check subscription
     if (!currentUserSession.hasActiveSubscription) {

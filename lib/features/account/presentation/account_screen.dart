@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/design_system.dart';
@@ -118,19 +119,28 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           if (profile != null) {
             final displayProfile = profile;
 
-            // Helper lists for validation
-            const skinColors = ['بيضاء', 'حنطية', 'سمراء', 'داكنة'];
-            const buildTypes = ['نحيف', 'متوسط', 'رياضي', 'ممتلئ'];
-
             setState(() {
               _editHeightController.text = (displayProfile.height ?? '')
                   .toString();
 
-              _editSkinColor = displayProfile.skinColor;
-              if (!skinColors.contains(_editSkinColor)) _editSkinColor = null;
+              // Map storage name to label for the UI
+              _editSkinColor = displayProfile.skinColor != null
+                  ? SkinColor.values
+                        .firstWhere(
+                          (e) => e.name == displayProfile.skinColor,
+                          orElse: () => SkinColor.wheat,
+                        )
+                        .label
+                  : null;
 
-              _editBuildType = displayProfile.build; // or buildType
-              if (!buildTypes.contains(_editBuildType)) _editBuildType = null;
+              _editBuildType = displayProfile.build != null
+                  ? BuildType.values
+                        .firstWhere(
+                          (e) => e.name == displayProfile.build,
+                          orElse: () => BuildType.average,
+                        )
+                        .label
+                  : null;
 
               _isEditingAppearance = true;
               _processedAutoOpen = true;
@@ -216,7 +226,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               // AI Personality Analysis Banner
-              _buildPersonalityAnalysisBanner(),
+              _buildPersonalityAnalysisBanner(profile),
               const SizedBox(height: MithaqSpacing.m),
 
               // Subscription Banner
@@ -449,22 +459,48 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               ),
               const SizedBox(height: MithaqSpacing.m),
 
-              // Profile ID Badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: MithaqSpacing.m,
-                  vertical: MithaqSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(MithaqRadius.l),
-                ),
-                child: Text(
-                  'معرف: ${profile.profilePublicId.isNotEmpty ? profile.profilePublicId : profile.profileId.substring(0, 8)}',
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 12,
-                    fontFamily: 'monospace',
+              // Profile ID Badge with Copy
+              GestureDetector(
+                onTap: () {
+                  final id = profile.profilePublicId.isNotEmpty
+                      ? profile.profilePublicId
+                      : profile.profileId.substring(0, 8);
+                  Clipboard.setData(ClipboardData(text: id));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم نسخ معرف المستخدم'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: MithaqSpacing.m,
+                    vertical: MithaqSpacing.s,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(MithaqRadius.l),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'معرف: ${profile.profilePublicId.isNotEmpty ? profile.profilePublicId : profile.profileId.substring(0, 8)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.copy_rounded,
+                        size: 14,
+                        color: Colors.white70,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -475,22 +511,32 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     );
   }
 
-  Widget _buildPersonalityAnalysisBanner() {
+  Widget _buildPersonalityAnalysisBanner(SeekerProfile profile) {
+    final bool isCompleted = profile.personalityType != null;
     return InkWell(
       onTap: () => context.push('/seeker/personality-test'),
       borderRadius: BorderRadius.circular(MithaqRadius.l),
       child: Container(
         padding: const EdgeInsets.all(MithaqSpacing.l),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+          gradient: LinearGradient(
+            colors: isCompleted
+                ? [
+                    MithaqColors.navy,
+                    const Color(0xFF10B981).withValues(alpha: 0.8),
+                  ]
+                : [const Color(0xFF667EEA), const Color(0xFF764BA2)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(MithaqRadius.l),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF667EEA).withValues(alpha: 0.3),
+              color:
+                  (isCompleted
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFF667EEA))
+                      .withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -506,66 +552,44 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.psychology,
+              child: Icon(
+                isCompleted ? Icons.verified_user_rounded : Icons.psychology,
                 color: Colors.white,
                 size: 32,
               ),
             ),
-            const SizedBox(width: MithaqSpacing.m),
-            // Text content
+            const SizedBox(width: MithaqSpacing.l),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'تحليل الشخصية بالذكاء الاصطناعي',
-                    style: TextStyle(
+                  Text(
+                    isCompleted
+                        ? 'تحليل شخصيتك كشريك حياة'
+                        : 'حلل شخصيتك كشريك حياة',
+                    style: const TextStyle(
                       color: Colors.white,
-                      fontSize: MithaqTypography.titleSmall,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'يساعدك على إيجاد شريكك بشكل أسرع',
+                    isCompleted
+                        ? 'نمطك: ${profile.personalityType}'
+                        : 'اكتشف ما يبرمجه عقلك الباطن بالذكاء الاصطناعي..',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 13,
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            // Start button
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: MithaqSpacing.m,
-                vertical: MithaqSpacing.s,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(MithaqRadius.m),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.play_arrow_rounded,
-                    color: Color(0xFF667EEA),
-                    size: 20,
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    'ابدأ الآن',
-                    style: TextStyle(
-                      color: Color(0xFF667EEA),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white.withValues(alpha: 0.7),
+              size: 20,
             ),
           ],
         ),
@@ -640,8 +664,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                             displayProfile.shufaCardGuardianName ?? '';
                         _editGuardianPhoneController.text =
                             displayProfile.shufaCardGuardianPhone ?? '';
+
+                        // Handle Relationship mapping
                         _editGuardianRelationshipController.text =
                             displayProfile.relationship ?? '';
+
                         _isEditingGuardian = true;
                       });
                     }
@@ -742,7 +769,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     );
 
     try {
-      await ref.read(profileRepositoryProvider).addProfile(updatedProfile);
+      final savedProfile = await ref
+          .read(profileRepositoryProvider)
+          .addProfile(updatedProfile);
+      // تحديث الـ local override بالبيانات المحفوظة
+      setState(() {
+        _localProfileOverride = savedProfile;
+        _isEditingGuardian = false;
+      });
       ref.invalidate(myProfileProvider);
     } catch (e) {
       if (mounted) {
@@ -752,10 +786,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       }
       return;
     }
-
-    setState(() {
-      _isEditingGuardian = false;
-    });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -922,16 +952,31 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       _editHeightController.text = (displayProfile.height ?? '')
                           .toString();
 
-                      // Match closest value or default
-                      _editSkinColor = displayProfile.skinColor;
-                      if (!skinColors.contains(_editSkinColor)) {
-                        _editSkinColor = null;
-                      }
+                      // Map storage name to label for the UI
+                      _editSkinColor = displayProfile.skinColor != null
+                          ? SkinColor.values.any(
+                                  (e) => e.name == displayProfile.skinColor,
+                                )
+                                ? SkinColor.values
+                                      .firstWhere(
+                                        (e) =>
+                                            e.name == displayProfile.skinColor,
+                                      )
+                                      .label
+                                : null
+                          : null;
 
-                      _editBuildType = displayProfile.build;
-                      if (!buildTypes.contains(_editBuildType)) {
-                        _editBuildType = null;
-                      }
+                      _editBuildType = displayProfile.build != null
+                          ? BuildType.values.any(
+                                  (e) => e.name == displayProfile.build,
+                                )
+                                ? BuildType.values
+                                      .firstWhere(
+                                        (e) => e.name == displayProfile.build,
+                                      )
+                                      .label
+                                : null
+                          : null;
 
                       _isEditingAppearance = true;
                     });
@@ -977,7 +1022,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 )
               : _infoRow(
                   'لون البشرة',
-                  displayProfile.skinColor ?? 'غير محدد',
+                  displayProfile.skinColor != null
+                      ? SkinColor.values.any(
+                              (e) => e.name == displayProfile.skinColor,
+                            )
+                            ? SkinColor.values
+                                  .firstWhere(
+                                    (e) => e.name == displayProfile.skinColor,
+                                  )
+                                  .label
+                            : displayProfile.skinColor!
+                      : 'غير محدد',
                   Icons.face,
                 ),
 
@@ -998,7 +1053,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 )
               : _infoRow(
                   'بنية الجسم',
-                  displayProfile.build ?? 'غير محدد',
+                  displayProfile.build != null
+                      ? BuildType.values.any(
+                              (e) => e.name == displayProfile.build,
+                            )
+                            ? BuildType.values
+                                  .firstWhere(
+                                    (e) => e.name == displayProfile.build,
+                                  )
+                                  .label
+                            : displayProfile.build!
+                      : 'غير محدد',
                   Icons.accessibility_new,
                 ),
         ],
@@ -1010,10 +1075,19 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final profile = _localProfileOverride ?? ref.read(myProfileProvider).value;
     if (profile == null) return;
 
+    // Map labels back to enum names for storage
+    final skinColorName = _editSkinColor != null
+        ? SkinColor.values.firstWhere((e) => e.label == _editSkinColor).name
+        : profile.skinColor;
+
+    final buildName = _editBuildType != null
+        ? BuildType.values.firstWhere((e) => e.label == _editBuildType).name
+        : profile.build;
+
     final updatedProfile = profile.copyWith(
-      height: int.tryParse(_editHeightController.text),
-      skinColor: _editSkinColor,
-      build: _editBuildType,
+      height: int.tryParse(_editHeightController.text) ?? profile.height,
+      skinColor: skinColorName,
+      build: buildName,
     );
 
     try {
@@ -1156,7 +1230,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             spacing: MithaqSpacing.s,
             runSpacing: MithaqSpacing.s,
             children: MaritalStatus.values
-                .where((s) => s != MaritalStatus.married)
+                .where((s) {
+                  // Always exclude "married" - not a valid partner search status
+                  if (s == MaritalStatus.married) return false;
+                  // For males looking for females: exclude "polygamySeekingSecond"
+                  // because females cannot have multiple husbands
+                  final session = ref.read(sessionProvider);
+                  if (session.gender == SessionGender.male &&
+                      s == MaritalStatus.polygamySeekingSecond) {
+                    return false;
+                  }
+                  return true;
+                })
                 .map(
                   (status) => FilterChip(
                     label: Text(status.label),
@@ -1448,7 +1533,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     );
 
     try {
-      await ref.read(profileRepositoryProvider).addProfile(updatedProfile);
+      final savedProfile = await ref
+          .read(profileRepositoryProvider)
+          .addProfile(updatedProfile);
+      // تحديث الـ local override بالبيانات المحفوظة
+      setState(() {
+        _localProfileOverride = savedProfile;
+        _isEditingAbout = false;
+      });
       ref.invalidate(myProfileProvider);
     } catch (e) {
       if (mounted) {
@@ -1458,10 +1550,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       }
       return;
     }
-
-    setState(() {
-      _isEditingAbout = false;
-    });
 
     if (mounted) {
       ScaffoldMessenger.of(

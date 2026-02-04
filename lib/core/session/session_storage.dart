@@ -14,6 +14,7 @@ class SessionStorage {
   static const String _keyEmail = 'mithaq_email';
   static const String _keyPhone = 'mithaq_phone';
   static const String _keyOnboardingStep = 'mithaq_onboarding_step';
+  static const String _keyProfileId = 'mithaq_profile_id';
   static const String _keyHasActiveSubscription =
       'mithaq_has_active_subscription';
 
@@ -26,6 +27,12 @@ class SessionStorage {
       await _prefs.setString(_keyUserId, session.userId!);
     } else {
       await _prefs.remove(_keyUserId);
+    }
+
+    if (session.profileId != null) {
+      await _prefs.setString(_keyProfileId, session.profileId!);
+    } else {
+      await _prefs.remove(_keyProfileId);
     }
 
     await _prefs.setString(_keyRole, session.role.name);
@@ -80,6 +87,7 @@ class SessionStorage {
     final roleName = _prefs.getString(_keyRole);
     final onboardingName = _prefs.getString(_keyOnboardingStatus);
     final profileName = _prefs.getString(_keyProfileStatus);
+    final profileId = _prefs.getString(_keyProfileId);
     final activeDependentId = _prefs.getString(_keyActiveDependentId);
     final genderName = _prefs.getString(_keyGender);
     final onboardingStep = _prefs.getInt(_keyOnboardingStep) ?? 0;
@@ -129,6 +137,7 @@ class SessionStorage {
       role: role,
       onboardingStatus: onboarding,
       profileStatus: profile,
+      profileId: profileId,
       onboardingStep: onboardingStep,
       activeDependentId: activeDependentId,
       gender: gender,
@@ -154,6 +163,7 @@ class SessionStorage {
     await _prefs.remove(_keyTribe);
     await _prefs.remove(_keyFullName);
     await _prefs.remove(_keyEmail);
+    await _prefs.remove(_keyProfileId);
     await _prefs.remove(_keyPhone);
   }
 }

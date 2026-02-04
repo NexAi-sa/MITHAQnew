@@ -5,6 +5,7 @@ class FeatureFlags {
   static const bool enableBackend = true;
 
   /// Toggle to enable real AI integration (OpenAI, Gemini, etc.)
+  /// NOTE: Disabled due to Gemini free tier quota exceeded
   static const bool enableRealAI = false;
 
   /// Toggle to enable verification flows (Phone, Email, Identity)

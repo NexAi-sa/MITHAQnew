@@ -363,6 +363,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         maritalStatus: profile.maritalStatus,
                         educationLevel: profile.educationLevel,
                         gender: profile.gender,
+                        bio: profile.bio,
                         compatibilityLevel: compatibility,
                         onTap: (id) {
                           if (session.role == UserRole.guardian &&

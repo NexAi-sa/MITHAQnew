@@ -119,22 +119,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
           // 2. If Login: Check for existing profiles and additional data to restore session
           if (_isLogin) {
+            debugPrint('🔍 Login persistent check for userId: $userId');
             final repo = ref.read(profileRepositoryProvider);
             final profiles = await repo.getProfilesByUserId(userId);
+            debugPrint('🔍 Found ${profiles.length} profiles for user');
 
             if (profiles.isNotEmpty) {
               // Priority 1: Check if user is a Seeker (has a self-owned profile)
               SeekerProfile? selfProfile;
               for (final p in profiles) {
-                if (p.userId == userId &&
-                    p.profileOwnerRole == ProfileOwnerRole.seekerSelf) {
+                if (p.profileOwnerRole == ProfileOwnerRole.seekerSelf) {
                   selfProfile = p;
                   break;
                 }
               }
 
               if (selfProfile != null) {
-                // Restore Seeker session
+                debugPrint(
+                  '✅ Restoring Seeker session for profile: ${selfProfile.profileId}',
+                );
                 await notifier.setRole(UserRole.seeker);
                 await notifier.setProfileData(
                   profileId: selfProfile.profileId,
@@ -144,23 +147,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       ? SessionGender.male
                       : SessionGender.female,
                 );
+                await notifier.setAuthSignedIn(
+                  userId,
+                  name: selfProfile.name,
+                  email: email,
+                  phoneNumber: phone,
+                );
               } else {
-                // Must be a Guardian since we have profiles but no self-seeker profile
-                bool isGuardian = false;
-                for (final p in profiles) {
-                  if (p.guardianUserId == userId || p.userId != userId) {
-                    isGuardian = true;
-                    break;
-                  }
-                }
-
-                if (isGuardian) {
-                  await notifier.setRole(UserRole.guardian);
-                } else if (profiles.length == 1 &&
-                    profiles.first.userId == userId) {
-                  // Actually a seeker but maybe role_context was mislabeled
-                  await notifier.setRole(UserRole.seeker);
-                }
+                // Guardian detected (has profiles but none are 'seekerSelf')
+                debugPrint('✅ Restoring Guardian session');
+                await notifier.setRole(UserRole.guardian);
+                await notifier.setAuthSignedIn(
+                  userId,
+                  name: result.fullName ?? name,
+                  email: email,
+                  phoneNumber: phone,
+                );
               }
 
               await notifier.setOnboardingStatus(OnboardingStatus.completed);
@@ -168,6 +170,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
               if (mounted) {
                 final currentRole = ref.read(sessionProvider).role;
+                debugPrint('🚀 Navigating to home for role: $currentRole');
                 context.go(
                   currentRole == UserRole.seeker
                       ? '/seeker/home'
@@ -175,11 +178,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 );
               }
               return;
+            } else {
+              debugPrint(
+                '⚠️ No profiles found for existing user. Proceeding to role selection.',
+              );
             }
-
-            // Check if user has already started onboarding but has no profile yet
-            // This is stored in user_metadata or private tables in a real app
-            // For now, if we have a fullName or other data in session, respect it
           }
 
           // 3. New User or Login with no profile -> Go to Role Selection

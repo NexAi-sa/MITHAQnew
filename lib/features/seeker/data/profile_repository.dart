@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/integrations/backend/backend_client.dart';
 import '../../../core/integrations/backend/backend_providers.dart';
 import '../domain/profile.dart';
+import '../../personality/domain/personality_test.dart';
 import '../../../core/session/session_provider.dart';
 import '../../../core/session/app_session.dart';
 
@@ -69,7 +70,7 @@ final myProfileProvider = FutureProvider<SeekerProfile?>((ref) async {
       return await repository.getProfileById(session.activeDependentId!);
     }
   } catch (e) {
-    print('Error fetching myProfile: $e');
+    // Error fetching profile, return null
   }
   return null;
 });
@@ -96,6 +97,17 @@ class ProfileRepository {
 
   Future<List<SeekerProfile>> getProfilesByUserId(String userId) async {
     return _client.fetchManagedProfiles(userId);
+  }
+
+  Future<void> savePersonalityResult(
+    String profileId,
+    PersonalityTestResult result,
+  ) async {
+    await _client.invoke('save_personality_result', {
+      'profile_id': profileId,
+      'personality_type': result.personalityTypeName,
+      'personality_data': result.toJson(),
+    });
   }
 
   Future<SeekerProfile> addProfile(SeekerProfile profile) async {

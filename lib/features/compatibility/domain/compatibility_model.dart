@@ -63,12 +63,17 @@ class CompatibilityResult {
   final AxisScore psychological;
   final DateTime calculatedAt;
 
+  final List<String> compatibilityTags;
+  final String? hybridReportText;
+
   const CompatibilityResult({
     required this.targetProfileId,
     required this.basic,
     required this.style,
     required this.psychological,
     required this.calculatedAt,
+    this.compatibilityTags = const [],
+    this.hybridReportText,
   });
 
   /// Overall score (average of complete axes only)

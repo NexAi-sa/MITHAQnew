@@ -93,9 +93,17 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen>
                     subtitle: 'سند وساعٍ في الخير لعائلتي',
                     description:
                         'سجّل كطرف معاون لإدارة ملف ابنك أو ابنتك بيسر وخصوصية',
-                    onTap: () =>
-                        _selectRole(UserRole.guardian, '/guardian/onboarding'),
+                    onTap: () {
+                      // Coming soon - disabled for now
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🚧 هذه الميزة قريباً'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
                     isPrimary: false,
+                    isComingSoon: true,
                   ),
 
                   const SizedBox(height: 32),
@@ -172,81 +180,117 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen>
     required String description,
     required VoidCallback onTap,
     required bool isPrimary,
+    bool isComingSoon = false,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: isPrimary
-                ? MithaqColors.mint.withValues(alpha: 0.08)
-                : Colors.grey.withValues(alpha: 0.1),
-            border: Border.all(
+    return Opacity(
+      opacity: isComingSoon ? 0.6 : 1.0,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
               color: isPrimary
-                  ? MithaqColors.mint
-                  : Colors.grey.withValues(alpha: 0.3),
-              width: isPrimary ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              // Emoji/Icon container
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isPrimary
-                      ? MithaqColors.mint.withValues(alpha: 0.25)
-                      : Colors.grey.withValues(alpha: 0.15),
-                ),
-                child: Center(
-                  child: Text(emoji, style: const TextStyle(fontSize: 28)),
-                ),
+                  ? MithaqColors.mint.withValues(alpha: 0.08)
+                  : Colors.grey.withValues(alpha: 0.1),
+              border: Border.all(
+                color: isPrimary
+                    ? MithaqColors.mint
+                    : Colors.grey.withValues(alpha: 0.3),
+                width: isPrimary ? 2 : 1,
               ),
-              const SizedBox(width: 16),
-              // Text content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            child: Stack(
+              children: [
+                Row(
                   children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+                    // Emoji/Icon container
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isPrimary
+                            ? MithaqColors.mint.withValues(alpha: 0.25)
+                            : Colors.grey.withValues(alpha: 0.15),
+                      ),
+                      child: Center(
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 28),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    const SizedBox(width: 16),
+                    // Text content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: isPrimary
+                                      ? MithaqColors.mint
+                                      : Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            description,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey[700]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Arrow or Coming Soon badge
+                    if (isComingSoon)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'قريباً',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    else
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 18,
                         color: isPrimary ? MithaqColors.mint : Colors.grey[600],
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      description,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-                    ),
                   ],
                 ),
-              ),
-              // Arrow
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 18,
-                color: isPrimary ? MithaqColors.mint : Colors.grey[600],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

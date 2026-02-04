@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:math' as math;
 import 'package:go_router/go_router.dart';
 import '../../../core/session/session_provider.dart';
 import '../../../core/session/app_session.dart';
@@ -121,8 +120,7 @@ class _GuardianOnboardingScreenState
       if (_dependentNameController.text.isNotEmpty && session.userId != null) {
         final repository = ref.read(profileRepositoryProvider);
         final newDependent = SeekerProfile(
-          profileId:
-              'DEP-${DateTime.now().millisecondsSinceEpoch}-${math.Random().nextInt(999)}',
+          profileId: 'new',
           userId: session.userId!,
           name: _dependentNameController.text,
           city: _cityController.text.isNotEmpty
